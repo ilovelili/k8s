@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kuard
+  labels:
+    app: kuard
+spec:
+  volumes:
+    - name: kuard-data
+      hostPath: # HostPath volumes present many security risks, and it is a best practice to avoid the use of HostPaths when possible
+        path: "/var/lib/kuard"
+  containers:
+  - name: kuard
+    image: gcr.io/kuar-demo/kuard-amd64:blue
+    livenessProbe:
+      httpGet:
+        path: /healthy
+        port: 8080
+      initialDelaySeconds: 5
+      timeoutSeconds: 1
+      periodSeconds: 10
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /ready
+        port: 8080
+      initialDelaySeconds: 5
+      timeoutSeconds: 1
+      periodSeconds: 10
+      failureThreshold: 3
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m" # 0.5 cpu, m stands for 'thousandth of a core'
+      requests:
+        memory: "64Mi"
+        cpu: "250m" # 0.25 cpu
+    ports:
+      - containerPort: 8080
+        name: http
+        protocol: TCP
+    volumeMounts:
+      - mountPath: "/data"
+        name: "kuard-data"
+        readOnly: true
