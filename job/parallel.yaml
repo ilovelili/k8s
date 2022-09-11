@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kuard
+  namespace: default
+  labels:
+    app: kuard
+spec:
+  # watch as the Pods come up, do their thing, and exit. New Pods are created until 10 have completed altogether. (so there will be 10 pods remaining after running)
+  parallelism: 5
+  completions: 10
+  template:
+    metadata:
+      name: kuard
+      labels:
+        app: kuard
+    spec:      
+      containers:
+      - name: kuard
+        image: gcr.io/kuar-demo/kuard-amd64:blue
+        imagePullPolicy: Always
+        command: 
+        - "/kuard"
+        args:
+        - "--keygen-enable"
+        - "--keygen-exit-on-complete"
+        - "--keygen-num-to-gen=10"
+      restartPolicy: OnFailure
