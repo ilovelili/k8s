@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: kuard
+  labels:
+    app: kuard
+    version: "2"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kuard
+      version: "2"
+  # pod template
+  template:
+    metadata:
+      labels:
+        app: kuard
+        version: "2"
+    spec:
+      containers:
+      - name: kuard
+        image: "gcr.io/kuar-demo/kuard-amd64:green"
+        ports:
+        - name: web
+          containerPort:  8080
+          protocol: TCP
+
+# create hpa:
+# $ kubectl autoscale rs kuard --min=2 --max=5 --cpu-percent=80
+# get hpa:
+# $ kubectl get hpa
