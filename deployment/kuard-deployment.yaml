@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuard
+  namespace: default
+  labels:
+    app: kuard
+spec:
+  selector:
+    matchLabels:
+      app: kuard
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      # if you set maxUnavailable to 50%, then the rolling update will immediately scale the old ReplicaSet down to 50% of its original size. If you have four replicas, it will scale it down to two replicas.
+      maxUnavailable: 25%
+      # However, there are situations where you don’t want to fall below 100% capacity, but you are willing to temporarily use additional resources to perform a rollout. 
+      # In these situations, you can set the maxUnavailable parameter to 0, and instead control the rollout using the maxSurge parameter. Like maxUnavailable, maxSurge can be
+      # specified either as a specific number or a percentage. The maxSurge parameter controls how many extra resources can be created to achieve a rollout. 
+      # To illustrate how this works, imagine a service with 10 replicas. We set maxUnavailable to 0 and maxSurge to 20%. The first thing the rollout will do is scale
+      # the new ReplicaSet up by 2 replicas, for a total of 12 (120%) in the service. It will then scale the old ReplicaSet down to 8 replicas, for a total of 10 (8 old, 2 new) in the
+      # service. This process proceeds until the rollout is complete.
+      maxSurge: 25%      
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: kuard
+    spec:
+      # initContainers:
+        # Init containers are exactly like regular containers, except:
+          # - Init containers always run to completion.
+          # - Each init container must complete successfully before the next one starts.
+      containers:
+      - name:  kuard
+        image:  gcr.io/kuar-demo/kuard-amd64:blue
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        
+# scale:
+# kubectl scale deployments kuard --replicas=2
