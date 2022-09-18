@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "kuard-config"
+  namespace: default
+  labels:
+    app: "kuard-config"
+spec:
+  containers:
+  - name: kuard-config
+    image: gcr.io/kuar-demo/kuard-amd64:blue
+    imagePullPolicy: Always
+    command:
+    - "/kuard"
+    - "$(EXTRA_PARAM)"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 500Mi
+      requests:
+        cpu: 100m
+        memory: 200Mi
+    env:
+    - name: ANOTHER_PARAM
+      valueFrom: # Environment variables
+        configMapKeyRef:
+          name: my-config # ref to L44
+          key: another-param
+    - name: EXTRA_PARAM
+      valueFrom:
+        configMapKeyRef:
+          name: my-config
+          key: extra-param
+    ports:
+    - containerPort:  8080
+      name:  http
+      protocol: TCP
+    volumeMounts:
+    # Mounting the ConfigMap as a set of files
+    - name: config-volume
+      mountPath: /config
+  volumes:
+    - name: config-volume
+      configMap:
+        name: my-config      
+  restartPolicy: Always
+
+# For the filesystem method, we create a new volume inside the Pod and give it the
+# name config-volume. We then define this volume to be a ConfigMap volume and
+# point at the ConfigMap to mount. We have to specify where this gets mounted into
+# the kuard container with a volumeMount. In this case, we are mounting it at /config.
+# Environment variables are specified with a special valueFrom member. This refer‐
+# ences the ConfigMap and the data key to use within that ConfigMap
