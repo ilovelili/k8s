@@ -1,0 +1,81 @@
+# create a load test resource through a CustomResourceDefinition.
+# https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+# In the case of custom resources, the name is special. It has to be the format <resource-plural>.<api-group> to ensure that each resource definition is unique in the cluster
+  name: loadtests.beta.kuar.com
+spec:
+  group: beta.kuar.com
+  versions:
+  - name: v1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:              
+              service:
+                type: string
+              scheme:
+                type: string
+              requestsPerSecond:
+                type: integer
+              paths:
+                type: array
+                items:
+                  type: string
+  scope: Namespaced
+  names:
+    plural: loadtests
+    singular: loadtest
+    kind: LoadTest
+    shortNames:
+    - lt
+
+---
+apiVersion: beta.kuar.com/v1
+kind: LoadTest
+metadata:
+  name: my-loadtest
+spec:
+  service: my-service # map to L16 openAPIV3Schema
+  scheme: https
+  requestsPerSecond: 1000
+  paths:
+  - /index.html
+  - /login.html
+  - /shares/my-shares/
+
+# To install our validating admission controller, we need to specify it as a Kuber‐
+# netes ValidatingWebhookConfiguration. This object specifies the endpoint where the
+# admission controller runs, as well as the resource (in this case LoadTest) and the
+# action (in this case CREATE) where the admission controller should be run.
+
+### https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: kuar-validator
+webhooks:
+  - name: validator.kuar.com
+    rules:
+    - apiGroups:
+      - "beta.kuar.com"
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      resources:
+      - loadtests
+    clientConfig:
+      # Substitute the appropriate IP address for your webhook
+      url: https://192.168.1.233:8080
+      # This should be the base64-encoded CA certificate for your cluster,
+      # you can find it in your ${KUBECONFIG} file
+      caBundle: REPLACEME
