@@ -1,0 +1,69 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: mongodb # has to match .spec.template.metadata.labels
+  serviceName: "mongodb"
+  replicas: 3 # by default is 1
+  template:
+    metadata:
+      labels:
+        app: mongodb # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: mongodb
+        image: mongo:3.4.24
+        command:
+        - mongod
+        - --replSet
+        - rs0
+        ports:
+        - containerPort: 27017
+          name: peer
+      # This container initializes the MongoDB server, then sleeps.
+      - name: init-mongo
+        image: mongo:3.4.24
+        command:
+        - bash
+        - /config/init.sh
+        volumeMounts:
+        - name: config
+          mountPath: /config # mount path is refed in L34
+      volumes:
+        - name: config
+          configMap:
+            name: "mongodb-init"
+
+
+# After the StatefulSet is created, we also need to create a “headless” service to manage
+# the DNS entries for the StatefulSet. In Kubernetes, a service is called “headless” if
+# it doesn’t have a cluster virtual IP address. Since with StatefulSets, each Pod has a
+# unique identity, it doesn’t really make sense to have a load-balancing IP address for
+# the replicated service. You can create a headless service using clusterIP: None in the
+# service specification
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+spec:
+  ports:
+  - port: 27017
+    name: peer
+  clusterIP: None # headless service
+  selector:
+    app: mongodb
+
+#$ kubectl run -it --rm --image busybox busybox ping mongodb-1.mongodb
+
+# PING mongodb-1.mongodb (172.17.0.7): 56 data bytes
+# 64 bytes from 172.17.0.7: seq=0 ttl=64 time=0.143 ms
+# 64 bytes from 172.17.0.7: seq=1 ttl=64 time=0.101 ms
+# 64 bytes from 172.17.0.7: seq=2 ttl=64 time=0.108 ms
+# 64 bytes from 172.17.0.7: seq=3 ttl=64 time=0.369 ms ...

@@ -1,0 +1,5 @@
+{
+  "yaml.schemas": {
+    "kubernetes://schema/v1%40service": "file:///home/min/Projects/k8s-playground/external-services/rds-singlton.yaml"
+  }
+}

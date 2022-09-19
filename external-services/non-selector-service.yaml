@@ -1,0 +1,36 @@
+---
+# When the EndpointController starts, it will detect the endpoints without corresponding services, and delete these endpoints.
+# Create a Services without Selectors
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-svc
+  namespace: default
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9376
+---
+# Because this Service has no selector, the corresponding Endpoint object is not created automatically.
+# You can manually map the Service to the network address and port where it’s running,
+# by adding an Endpoint object manually:
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: my-svc
+  namespace: default
+subsets:
+- addresses:
+  - ip: 10.0.0.1
+  - ip: 10.0.0.2
+  - ip: 10.0.0.3
+  ports:
+  - name: http
+    port: 9376
+    protocol: TCP
+
+
+# Non-Selector Service の場合、typeL ClusterIP を指定するが、Selector は指定しない。
+# また、Selector を指定しない代わりに Endpoints リソースを作成して、サービスがどこにリクエストを分散するか定義する
+# https://qiita.com/toshihirock/items/7b292218ce82427a40db

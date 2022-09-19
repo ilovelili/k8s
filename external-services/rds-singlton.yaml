@@ -1,0 +1,117 @@
+# create a persistent volume for our MySQL database to use. This example uses NFS for maximum portability
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: database
+  labels:
+    volume: my-volume
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 1Gi
+  nfs:
+    server: 192.168.0.1
+    path: "/exports"
+
+# Now that we have created a persistent volume, we need to claim that persistent volume for our Pod
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: database
+  namespace: default
+  labels:
+    volume: my-volume
+spec:  
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  selector:
+    matchLabels:
+      volume: my-volume
+      
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-secret
+  namespace: default
+type: Opaque
+data:
+  password: aG9nZXBhc3M= # Base64 encoded of 'hogepass'
+
+# You can declare volumes directly inside a Pod specification, but this locks that Pod specification to a particular
+# volume provider (e.g., a specific public or private cloud). By using volume claims,
+# you can keep your Pod specifications cloud-agnostic; simply create different volumes,
+# specific to the cloud, and use a PersistentVolumeClaim to bind them together
+
+# we use the higher-level ReplicaSet controller, with a replica size of 1, to manage our database (we use replicaset so the db can be auto scaled when pod get deleted)
+---
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  # modify replicas according to your case
+  replicas: 3
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql
+        resources:
+          requests:
+            cpu: 200m
+            memory: 2Gi
+        ports:
+        - name: mysql
+          containerPort:  3306
+          protocol: TCP
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secret
+              key: password
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+        volumeMounts:
+        - name: database
+          mountPath: /var/lib/mysql
+      volumes:
+        - name: database
+          persistentVolumeClaim:
+            claimName: database
+
+# Once we create the ReplicaSet, it will, in turn, create a Pod running MySQL using the
+# persistent disk we originally created. The final step is to expose this as a Kubernetes
+# service
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: default
+spec:
+  selector:
+    app: mysql
+  type: LoadBalancer # In order to assign external ip for load balancer type in minikube, run `minikube tunnel`
+  ports:
+  - name: mysql
+    protocol: TCP
+    port: 3306
+    targetPort: 3306
