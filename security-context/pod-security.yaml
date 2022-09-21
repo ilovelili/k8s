@@ -1,0 +1,44 @@
+# Pod Security Standards are applied to a namespace using labels as follows:
+# • Required: pod-security.kubernetes.io/<MODE>: <LEVEL>
+# • Optional: pod-security.kubernetes.io/<MODE>-version: <VERSION> (defaults to latest)
+
+## https://kubernetes.io/docs/concepts/security/pod-security-standards/
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: baseline-ns
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: v1.22
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: v1.22
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.22
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "kuard"
+  namespace: baseline-ns
+  labels:
+    app: "kuard"
+spec:
+  containers:
+  - name: kuard
+    image: gcr.io/kuar-demo/kuard-amd64:blue
+    resources:
+      limits:
+        cpu: 200m
+        memory: 500Mi
+      requests:
+        cpu: 100m
+        memory: 200Mi
+    ports:
+    - containerPort:  8080
+      name:  http    
+      protocol: TCP
+  restartPolicy: Always
+
+  # Warning: would violate "v1.22" version of "restricted" PodSecurity profile:

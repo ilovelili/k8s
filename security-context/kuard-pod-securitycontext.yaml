@@ -1,0 +1,33 @@
+# there is a SecurityContext at both the Pod and the container level.
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "kuard"
+  namespace: default
+  labels:
+    app: "kuard"
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 3000
+    fsGroup: 2000
+  containers:
+  - name: kuard
+    image: gcr.io/kuar-demo/kuard-amd64:blue
+    resources:
+      limits:
+        cpu: 200m
+        memory: 500Mi
+      requests:
+        cpu: 100m
+        memory: 200Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      privileged: false
+    ports:
+    - containerPort: 8080
+      name:  http
+  restartPolicy: Always

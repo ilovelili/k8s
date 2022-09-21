@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "am-i-contained"
+  namespace: default
+  labels:
+    app: "am-i-contained"
+spec:
+  containers:
+  - name: am-i-contained
+    # https://github.com/genuinetools/amicontained
+    image: r.j3ss.co/amicontained:v0.4.9
+    command: 
+      - "/bin/sh"
+      - "-c"
+      - "--"
+    args: 
+      - "amicontained"
+    resources:
+      limits:
+        cpu: 200m
+        memory: 500Mi
+      requests:
+        cpu: 100m
+        memory: 200Mi
+  restartPolicy: Always
